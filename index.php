@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="include/vup/css/vup.css" />
   </head>
   <body>
-
     <main role="main">
 
       <section class="jumbotron text-center">
@@ -27,7 +26,7 @@
               <div class="card mb-4 box-shadow">
                 <div class="card-body">
                   <p class="card-text"><code>Poomsae Name</code></p>
-				  <div class="vaztic-upload-dropzone dropzone" action="upload.php" id="prelim-0"></div>
+				  <div class="vaztic-upload-dropzone dropzone" action="chunk/upload.php" id="prelim-0"></div>
                   <div class="d-flex justify-content-between align-items-center">
                     <div class="btn-group">
                       <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
@@ -62,16 +61,31 @@
     <script>
 (() => {
 	$( '.vaztic-upload-dropzone' ).dropzone({
-		url: "upload.php",
-		maxFilesize: 1024 * 1024,
+		url: "chunk/upload.php",
+		method: 'post',
 		acceptedFiles: "video/*",
-		dataType : "HTML",
-		timeout: 0,
-		success: ( file, response ) => {
-			console.log( 'SUCCESS', file, response );
-		},
-		error: ( file, response ) => {
-			console.log( 'ERROR', file, response );
+		timeout: 180000,
+		maxFileSize: 1024,
+		chunking: true,
+		forceChunking: true,
+		chunkSize: 256000,
+		parallelChunkUploads: true,
+		retryChunks: true,
+		retryChunksLimit: 3,
+		chunksUploaded: ( file, done ) => {
+			let currentFile = file;
+
+			// This calls server-side code to merge all chunks for the currentFile
+			$.ajax({
+				url: `chunk/concat.php?dzuuid=${currentFile.upload.uuid}&dztotalchunkcount=${currentFile.upload.totalChunkCount}&fileType=${currentFile.name.substr( (currentFile.name.lastIndexOf('.') +1) )}`,
+				success: ( data ) => {
+					done();
+				},
+				error: ( msg ) => {
+					currentFile.accepted = false;
+					this._errorProcessing([ currentFile ], msg.responseText);
+				}
+			});
 		}
 	});
 });

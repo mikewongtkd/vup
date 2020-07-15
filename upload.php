@@ -25,6 +25,8 @@
 	 * post_max_size = '1024M'
 	 * max_file_uploads = 5
 	 * memory_limit = 512M
+	 * max_execution_time = 600
+	 * max_input_time = 600
 	 *
 	 * $ chmod a+wx '/tmp/vaztic'
 ?>     
