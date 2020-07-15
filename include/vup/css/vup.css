@@ -1,12 +1,25 @@
-.dropzone {
-  color: #69f;
-  display: block;
-  width: 100%;
-  height: 120px;
+.registration-info .athlete-name, .registration-info .division-name {
+  font-size: 22pt;
+  font-weight: bold;
+}
+.registration-info .athlete-name {
+  color: #6096ba;
+}
+.registration-info .division-name {
+  color: #274C77;
+}
+
+.round-and-form b {
+  color: #8b8c89;
+}
+
+.card-body h4 {
+  color: #6096ba;
+}
+
+.video-keyframe {
+  width: 200px;
   border-radius: 8px;
-  border: 2.5px dashed #69f;
-  margin-bottom: 8px;
-  text-align: center;
 }
 
 /*# sourceMappingURL=vup.css.map */

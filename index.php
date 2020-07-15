@@ -1,7 +1,10 @@
 <?php
 
+include_once( 'config.php' );
+
 function get_forms_for_uuid() {
-	$file = '/usr/local/vaztic/uuid2poomsae.json';
+	global $vidroot;
+	$file = "$vidroot/uuid2poomsae.json";
 	$text = file_get_contents( $file );
 	return json_decode( $text, true );
 }
@@ -45,7 +48,10 @@ $poomsae = $lookup[ $uuid ];
 
       <div class="album py-5 bg-light">
         <div class="container">
-		<h3><?= $poomsae[ 'divname' ] ?></h3>
+		<div class="registration-info">
+			<div class="athlete-name"><?= $poomsae[ 'athname' ] ?></div>
+			<div class="division-name"><?= $poomsae[ 'divname' ] ?></div>
+		</div>
 <?php foreach( $rounds as $round ):
 	if( array_key_exists( $round[ 'id' ], $poomsae )): 
 		$rid   = $round[ 'id' ];
@@ -63,8 +69,18 @@ $poomsae = $lookup[ $uuid ];
                 <div class="card-body">
 					<p class="round-and-form"><b><?= $rname ?></b> <span class="primary"><?= $ordinal ?> form</span></p>
 					<p class="poomsae-name"><h4><?= $formname ?></h4></p>
+					<p class="vid-preview" id="<?= $formid ?>-preview">
+						<?php if( file_exists( "$webroot/thumbs/$uuid/$formid.png" )): 
+							$message = "If you want to replace this video, please choose a file to upload.";
+						?>
+						<img class="video-keyframe" src="thumbs/<?= $uuid ?>/<?= $formid ?>.png" />
+						<?php else: 
+							$message = "Please choose a file to upload.";
+
+						endif; ?>
+					</p>
 				  <form>
-					  <p id="<?= $formid ?>-progress">Please choose a file to upload.</p>
+				  <p id="<?= $formid ?>-progress"><?= $message ?></p>
 					<input type="file" name="<?= $formid ?>" id="<?= $formid ?>-upload" />
 				  </form>
                 </div>
@@ -110,17 +126,19 @@ $(() => {
 		ev.preventDefault();
 		let target = $( ev.target );
 
-		reader = new FileReader();
-		file   = target.get( 0 ).files[ 0 ];
+		reader   = new FileReader();
+		file     = target.get( 0 ).files[ 0 ];
+		let ext  = file.name.match( /\.(\w+)$/ );
+		file.ext = ext[ 1 ];
+
 		upload_file( target, 0 );
 	}
 
 <?php 
 foreach( $rounds as $round ):
-	if( array_key_exists( $round[ 'id' ], $poomsae )) { 
-		$rid   = $round[ 'id' ];
-		$list  = $poomsae[ $rid ];
-	}
+	if( ! array_key_exists( $round[ 'id' ], $poomsae )) { continue; }
+	$rid   = $round[ 'id' ];
+	$list  = $poomsae[ $rid ];
 
 	foreach( $list as $i => $formname ): 
 		$formid  = "{$rid}-{$i}";
@@ -137,6 +155,7 @@ endforeach;
 		chunk.next = start + chunk.size + 1;
 		let blob   = file.slice( start, chunk.next );
 		let formid = target.attr( 'name' );
+		console.log( file.name, formid );
 
 		reader.onloadend = function( ev ) {
 			if ( ev.target.readyState !== FileReader.DONE ) {
@@ -149,11 +168,11 @@ endforeach;
 				dataType: 'json',
 				cache: false,
 				data: {
-					file_data: ev.target.result,
-					file: file.name,
-					file_type: file.type,
-					formid : formid,
-					uuid : '<?= $uuid ?>'
+					file_data : ev.target.result,
+					file      : file.name,
+					file_type : file.type,
+					formid    : formid,
+					uuid      : '<?= $uuid ?>'
 				},
 				error: function( jqXHR, textStatus, errorThrown ) {
 					console.log( jqXHR, textStatus, errorThrown );
@@ -169,25 +188,31 @@ endforeach;
 						// More to upload, call function recursively
 						upload_file( target, chunk.next );
 					} else {
+						console.log( formid, '<?= $uuid ?>', file.ext );
 						// Update upload progress
 						$( `#${formid}-progress` ).html( 'Upload Complete!' );
-/*
 						$.ajax({
-							url: 'verify.php',
+							url: 'validate.php',
 							type: 'POST',
 							dataType: 'json',
 							cache: false,
 							data: {
 								formid : formid,
-								uuid : '<?= $uuid ?>'
+								uuid   : '<?= $uuid ?>',
+								ext    : file.ext
 							},
 							error: ( jqXHR, textStatus, errorThrown ) => {
 								console.log( jqXHR, textStatus, errorThrown );
 							},
 							success: ( response ) => {
+								if( response.status == 'success' ) {
+									$( `#${formid}-progress` ).empty().html( `<span class="text-success">Upload Complete! Video meets resolution, orientation, and framerate requirements</span>` );
+								} else {
+									$( `#${formid}-progress` ).empty().html( `<span class="text-danger">${response.description}</span>` );
+								}
+								$( `#${formid}-preview` ).html( `<img src="thumbs/<?= $uuid ?>/${formid}.png" class="video-keyframe" />` );
 							}
 						});
- */
 					}
 				}
 			} );
