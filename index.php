@@ -1,3 +1,28 @@
+<?php
+
+function get_forms_for_uuid() {
+	$file = '/usr/local/vaztic/uuid2poomsae.json';
+	$text = file_get_contents( $file );
+	return json_decode( $text, true );
+}
+
+function respond_invalid_uuid() {
+	header( 'HTTP/1.0 404 Not Found' );
+	echo( 'Invalid uuid' );
+	exit();
+}
+
+if( ! isset( $_GET[ 'uuid' ])) { respond_invalid_uuid(); }
+$uuid = $_GET[ 'uuid' ];
+if( ! preg_match( '/^[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{12}$/', $uuid )) { respond_invalid_uuid(); }
+
+$rounds  = [[ id => 'prelim', name => 'Preliminary Round' ], [ id => 'semfin', name => 'Semi-Final Round' ], [ id => 'finals', name => 'Final Round' ]];
+$lookup  = get_forms_for_uuid();
+
+if( ! array_key_exists( $uuid, $lookup )) { respond_invalid_uuid(); }
+$poomsae = $lookup[ $uuid ];
+
+?>
 <!DOCTYPE html>
 <html>
   <head>
@@ -14,34 +39,45 @@
       <section class="jumbotron text-center">
         <div class="container">
           <h1 class="jumbotron-heading">Upload your Poomsae Videos</h1>
-          <p class="lead text-muted">Welcome <code>Athlete Name</code>. Please upload your poomsae videos.</p>
+		  <p class="lead text-muted">Welcome <b><?= $poomsae[ 'athname' ] ?></b>. Please upload your poomsae videos.</p>
         </div>
       </section>
 
       <div class="album py-5 bg-light">
         <div class="container">
-
+		<h3><?= $poomsae[ 'divname' ] ?></h3>
+<?php foreach( $rounds as $round ):
+	if( array_key_exists( $round[ 'id' ], $poomsae )): 
+		$rid   = $round[ 'id' ];
+		$rname = $round[ 'name' ];
+		$list  = $poomsae[ $rid ];
+?>
           <div class="row">
+
+<?php foreach( $list as $i => $formname ): 
+	$ordinal = $i == 0 ? 'First' : 'Second';
+	$formid  = "{$rid}-{$i}";
+?>
             <div class="col-md-6">
               <div class="card mb-4 box-shadow">
                 <div class="card-body">
-                  <p class="card-text"><code>Poomsae Name</code></p>
+					<p class="round-and-form"><b><?= $rname ?></b> <span class="primary"><?= $ordinal ?> form</span></p>
+					<p class="poomsae-name"><h4><?= $formname ?></h4></p>
 				  <form>
-					<p id="prelim-0-progress">Please choose a file and click on "Upload" to upload the file.</p>
-					<input type="file" name="prelim-0" id="prelim-0-upload" />
-					<input class="btn btn-primary" type="submit" value="Upload" id="prelim-0-upload-submit" />
+					  <p id="<?= $formid ?>-progress">Please choose a file to upload.</p>
+					<input type="file" name="<?= $formid ?>" id="<?= $formid ?>-upload" />
 				  </form>
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div class="btn-group">
-                      <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
-                    </div>
-                    <small class="text-muted">Status</small>
-                  </div>
                 </div>
               </div>
             </div>
+<?php endforeach; ?>
 
           </div>
+<?php 
+	endif;
+endforeach; 
+?>
+
         </div>
       </div>
 
@@ -66,21 +102,41 @@
 $(() => {
 	let reader = {};
 	let file   = {};
-	let chunk  = { size : 2048 * 1024 };
+	let chunk  = { size : 2 * 1024 * 1024 };
 
+	// ============================================================
 	function start_upload( ev ) {
+	// ============================================================
 		ev.preventDefault();
+		let target = $( ev.target );
 
 		reader = new FileReader();
-		file   = $( '#prelim-0-upload' ).get( 0 ).files[ 0 ];
-		upload_file( 0 );
+		file   = target.get( 0 ).files[ 0 ];
+		upload_file( target, 0 );
 	}
 
-	$( '#prelim-0-upload-submit' ).off( 'click' ).click( start_upload );
+<?php 
+foreach( $rounds as $round ):
+	if( array_key_exists( $round[ 'id' ], $poomsae )) { 
+		$rid   = $round[ 'id' ];
+		$list  = $poomsae[ $rid ];
+	}
 
-	function upload_file( start ) {
+	foreach( $list as $i => $formname ): 
+		$formid  = "{$rid}-{$i}";
+?>
+	$( '#<?= $formid ?>-upload' ).off( 'change' ).change( start_upload );
+<?php 
+	endforeach; 
+endforeach;
+?>
+
+	// ============================================================
+	function upload_file( target, start ) {
+	// ============================================================
 		chunk.next = start + chunk.size + 1;
-		var blob = file.slice( start, chunk.next );
+		let blob   = file.slice( start, chunk.next );
+		let formid = target.attr( 'name' );
 
 		reader.onloadend = function( ev ) {
 			if ( ev.target.readyState !== FileReader.DONE ) {
@@ -96,6 +152,8 @@ $(() => {
 					file_data: ev.target.result,
 					file: file.name,
 					file_type: file.type,
+					formid : formid,
+					uuid : '<?= $uuid ?>'
 				},
 				error: function( jqXHR, textStatus, errorThrown ) {
 					console.log( jqXHR, textStatus, errorThrown );
@@ -106,13 +164,30 @@ $(() => {
 
 					if ( chunk.next < file.size ) {
 						// Update upload progress
-						$( '#prelim-0-progress' ).html( `Uploading File -  ${percent_done}%` );
+						$( `#${formid}-progress` ).html( `Uploading File -  ${percent_done}%` );
 
 						// More to upload, call function recursively
-						upload_file( chunk.next );
+						upload_file( target, chunk.next );
 					} else {
 						// Update upload progress
-						$( '#prelim-0-progress' ).html( 'Upload Complete!' );
+						$( `#${formid}-progress` ).html( 'Upload Complete!' );
+/*
+						$.ajax({
+							url: 'verify.php',
+							type: 'POST',
+							dataType: 'json',
+							cache: false,
+							data: {
+								formid : formid,
+								uuid : '<?= $uuid ?>'
+							},
+							error: ( jqXHR, textStatus, errorThrown ) => {
+								console.log( jqXHR, textStatus, errorThrown );
+							},
+							success: ( response ) => {
+							}
+						});
+ */
 					}
 				}
 			} );
