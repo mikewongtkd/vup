@@ -26,7 +26,11 @@
               <div class="card mb-4 box-shadow">
                 <div class="card-body">
                   <p class="card-text"><code>Poomsae Name</code></p>
-				  <div class="vaztic-upload-dropzone dropzone" action="chunk/upload.php" id="prelim-0"></div>
+				  <form>
+					<p id="prelim-0-progress">Please choose a file and click on "Upload" to upload the file.</p>
+					<input type="file" name="prelim-0" id="prelim-0-upload" />
+					<input class="btn btn-primary" type="submit" value="Upload" id="prelim-0-upload-submit" />
+				  </form>
                   <div class="d-flex justify-content-between align-items-center">
                     <div class="btn-group">
                       <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
@@ -59,35 +63,63 @@
     <script src="include/dropzone/latest/dropzone.min.js"></script>
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.713.0.min.js"></script>
     <script>
-(() => {
-	$( '.vaztic-upload-dropzone' ).dropzone({
-		url: "chunk/upload.php",
-		method: 'post',
-		acceptedFiles: "video/*",
-		timeout: 180000,
-		maxFileSize: 1024,
-		chunking: true,
-		forceChunking: true,
-		chunkSize: 256000,
-		parallelChunkUploads: true,
-		retryChunks: true,
-		retryChunksLimit: 3,
-		chunksUploaded: ( file, done ) => {
-			let currentFile = file;
+$(() => {
+	let reader = {};
+	let file   = {};
+	let chunk  = { size : 2048 * 1024 };
 
-			// This calls server-side code to merge all chunks for the currentFile
-			$.ajax({
-				url: `chunk/concat.php?dzuuid=${currentFile.upload.uuid}&dztotalchunkcount=${currentFile.upload.totalChunkCount}&fileType=${currentFile.name.substr( (currentFile.name.lastIndexOf('.') +1) )}`,
-				success: ( data ) => {
-					done();
+	function start_upload( ev ) {
+		ev.preventDefault();
+
+		reader = new FileReader();
+		file   = $( '#prelim-0-upload' ).get( 0 ).files[ 0 ];
+		upload_file( 0 );
+	}
+
+	$( '#prelim-0-upload-submit' ).off( 'click' ).click( start_upload );
+
+	function upload_file( start ) {
+		chunk.next = start + chunk.size + 1;
+		var blob = file.slice( start, chunk.next );
+
+		reader.onloadend = function( ev ) {
+			if ( ev.target.readyState !== FileReader.DONE ) {
+				return;
+			}
+
+			$.ajax( {
+				url: 'chunk.php',
+				type: 'POST',
+				dataType: 'json',
+				cache: false,
+				data: {
+					file_data: ev.target.result,
+					file: file.name,
+					file_type: file.type,
 				},
-				error: ( msg ) => {
-					currentFile.accepted = false;
-					this._errorProcessing([ currentFile ], msg.responseText);
+				error: function( jqXHR, textStatus, errorThrown ) {
+					console.log( jqXHR, textStatus, errorThrown );
+				},
+				success: function( data ) {
+					var size_done = start + chunk.size;
+					var percent_done = Math.floor( ( size_done / file.size ) * 100 );
+
+					if ( chunk.next < file.size ) {
+						// Update upload progress
+						$( '#prelim-0-progress' ).html( `Uploading File -  ${percent_done}%` );
+
+						// More to upload, call function recursively
+						upload_file( chunk.next );
+					} else {
+						// Update upload progress
+						$( '#prelim-0-progress' ).html( 'Upload Complete!' );
+					}
 				}
-			});
-		}
-	});
+			} );
+		};
+
+		reader.readAsDataURL( blob );
+	}
 });
     </script>
 
