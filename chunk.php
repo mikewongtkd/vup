@@ -29,13 +29,14 @@
 	$file_name = $_POST[ 'file' ];
 	preg_match( '/\.(\w+)$/', $file_name, $match );
 	$file_ext  = $match[ 1 ];
-	$file_name = $_POST[ 'formid' ] . ".{$file_ext}";
+	$formid    = $_POST[ 'formid' ];
+	$file_name = "{$formid}.{$file_ext}";
 	$uuid      = $_POST[ 'uuid' ];
 	$file_type = $_POST[ 'file_type' ];
 
+	// ===== UNTAINT THE DATA
 	if( ! preg_match( '/^[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{12}$/', $uuid )) { respond_not_found(); }
 	if( ! preg_match( '/^(?:prelim|semfin|finals)\-\d/', $file_name )) { respond_not_found(); }
-
 
 	$file_path = "/usr/local/vaztic/videos/{$uuid}";
 	$file_data = decode_chunk( $_POST[ 'file_data' ] );

@@ -19,7 +19,7 @@ if( ! isset( $_GET[ 'uuid' ])) { respond_invalid_uuid(); }
 $uuid = $_GET[ 'uuid' ];
 if( ! preg_match( '/^[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{12}$/', $uuid )) { respond_invalid_uuid(); }
 
-$rounds  = [[ id => 'prelim', name => 'Preliminary Round' ], [ id => 'semfin', name => 'Semi-Final Round' ], [ id => 'finals', name => 'Final Round' ]];
+$rounds  = [[ 'id' => 'prelim', 'name' => 'Preliminary Round' ], [ 'id' => 'semfin', 'name' => 'Semi-Final Round' ], [ 'id' => 'finals', 'name' => 'Final Round' ]];
 $lookup  = get_forms_for_uuid();
 
 if( ! array_key_exists( $uuid, $lookup )) { respond_invalid_uuid(); }
@@ -72,6 +72,12 @@ $poomsae = $lookup[ $uuid ];
 					<p class="vid-preview" id="<?= $formid ?>-preview">
 						<?php if( file_exists( "$webroot/thumbs/$uuid/$formid.png" )): 
 							$message = "If you want to replace this video, please choose a file to upload.";
+							$validation = "$vidroot/videos/$uuid/$formid.json";
+							if( file_exists( $validation )) {
+								$text    = file_get_contents( $validation );
+								$results = json_decode( $text, true );
+								$message = "<span class=\"text-danger\">{$results[ 'description' ]}</span> " . $message;
+							}
 						?>
 						<img class="video-keyframe" src="thumbs/<?= $uuid ?>/<?= $formid ?>.png" />
 						<?php else: 
@@ -124,14 +130,33 @@ $(() => {
 	function start_upload( ev ) {
 	// ============================================================
 		ev.preventDefault();
+
 		let target = $( ev.target );
+		let formid = target.attr( 'name' );
+		reader     = new FileReader();
+		file       = target.get( 0 ).files[ 0 ];
+		let ext    = file.name.match( /\.(\w+)$/ );
+		file.ext   = ext[ 1 ];
 
-		reader   = new FileReader();
-		file     = target.get( 0 ).files[ 0 ];
-		let ext  = file.name.match( /\.(\w+)$/ );
-		file.ext = ext[ 1 ];
+		$.ajax({
+			url: 'clear.php',
+			type: 'POST',
+			dataType: 'json',
+			cache: false,
+			data: {
+				formid : formid,
+				uuid   : '<?= $uuid ?>',
+				ext    : file.ext
+			},
+			error: ( jqXHR, textStatus, errorThrown ) => {
+				$( 'input[type="file"]' ).show();
+				console.log( jqXHR, textStatus, errorThrown );
+			},
+			success: ( response ) => {
+				upload_file( target, 0 );
+			}
+		});
 
-		upload_file( target, 0 );
 	}
 
 <?php 
@@ -143,7 +168,7 @@ foreach( $rounds as $round ):
 	foreach( $list as $i => $formname ): 
 		$formid  = "{$rid}-{$i}";
 ?>
-	$( '#<?= $formid ?>-upload' ).off( 'change' ).change( start_upload );
+	$( '#<?= $formid ?>-upload' ).off( 'change' ).change(( ev ) => { start_upload( ev ); $( 'input[type="file"]' ).hide(); });
 <?php 
 	endforeach; 
 endforeach;
@@ -155,9 +180,9 @@ endforeach;
 		chunk.next = start + chunk.size + 1;
 		let blob   = file.slice( start, chunk.next );
 		let formid = target.attr( 'name' );
-		console.log( file.name, formid );
 
 		reader.onloadend = function( ev ) {
+			console.log( 'DATA', ev.target );
 			if ( ev.target.readyState !== FileReader.DONE ) {
 				return;
 			}
@@ -191,36 +216,43 @@ endforeach;
 						console.log( formid, '<?= $uuid ?>', file.ext );
 						// Update upload progress
 						$( `#${formid}-progress` ).html( 'Upload Complete!' );
-						$.ajax({
-							url: 'validate.php',
-							type: 'POST',
-							dataType: 'json',
-							cache: false,
-							data: {
-								formid : formid,
-								uuid   : '<?= $uuid ?>',
-								ext    : file.ext
-							},
-							error: ( jqXHR, textStatus, errorThrown ) => {
-								console.log( jqXHR, textStatus, errorThrown );
-							},
-							success: ( response ) => {
-								if( response.status == 'success' ) {
-									$( `#${formid}-progress` ).empty().html( `<span class="text-success">Upload Complete! Video meets resolution, orientation, and framerate requirements</span>` );
-								} else {
-									$( `#${formid}-progress` ).empty().html( `<span class="text-danger">${response.description}</span>` );
-								}
-								$( `#${formid}-preview` ).html( `<img src="thumbs/<?= $uuid ?>/${formid}.png" class="video-keyframe" />` );
-							}
-						});
+
+						validate_video( formid, file.ext );
 					}
 				}
 			} );
 		};
 
 		reader.readAsDataURL( blob );
+
 	}
 });
+function validate_video( formid, ext ) {
+	$.ajax({
+		url: 'validate.php',
+		type: 'POST',
+		dataType: 'json',
+		cache: false,
+		data: {
+			formid : formid,
+			uuid   : '<?= $uuid ?>',
+			ext    : ext
+		},
+		error: ( jqXHR, textStatus, errorThrown ) => {
+			$( 'input[type="file"]' ).show();
+			console.log( jqXHR, textStatus, errorThrown );
+		},
+		success: ( response ) => {
+			$( 'input[type="file"]' ).show();
+			if( response.status == 'success' ) {
+				$( `#${formid}-progress` ).empty().html( `<span class="text-success">Upload Complete! Video meets resolution, orientation, and framerate requirements</span>` );
+			} else {
+				$( `#${formid}-progress` ).empty().html( `<span class="text-danger">${response.description}</span>` );
+			}
+			$( `#${formid}-preview` ).html( `<img src="thumbs/<?= $uuid ?>/${formid}.png" class="video-keyframe" />` );
+		}
+	});
+}
     </script>
 
   </body>

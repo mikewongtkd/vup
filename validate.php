@@ -29,6 +29,12 @@ function respond_invalid_input() {
 function respond( $vidpath, $result ) {
 	header( 'HTTP/1.0 200 OK' );
 	echo( $result );
+	if( $vidpath ) {
+		$json = preg_replace( '/\.\w+$/', '.json', $vidpath );
+		$fp = fopen( $json, 'w' );
+		fwrite( $fp, $result );
+		fclose( $fp );
+	}
 	exit();
 }
 
@@ -73,7 +79,7 @@ try {
 
 	// ===== REPORT THE VALIDATION CHECK RESULTS
 	if( $check[ 'all' ] ) {
-		respond( $vidpath, '{"status":"success","description":"Video meets resolution, framerate, and orientation requirements","found":' . json_encode( $found ) . '}' );
+		respond( $vidpath, '{"status":"success","description":"Video meets resolution, framerate, and orientation requirements","found":' . json_encode( $found ) . ',"file":"' . $vidpath . '"}' );
 	} else {
 		$failed = [];
 		if( ! $check[ 'resolution' ])  { array_push( $failed, "resolution requirements (found {$width}x{$height}; {$require[ 'height' ]}P required)" ); }
@@ -82,9 +88,9 @@ try {
 		$f = sizeof( $failed );
 		if( $f > 1 ) { $failed[ $f - 1 ] = 'or ' . $failed[ $f - 1 ]; }
 		$message = implode( ', ', $failed );
-		respond( $vidpath, '{"status":"fail","description":"Video does not meet ' . $message . '","found": ' . json_encode( $found ) . '}' );
+		respond( $vidpath, '{"status":"fail","description":"Video does not meet ' . $message . '","found": ' . json_encode( $found ) . ',"file":"' . $vidpath . '"}' );
 	}
 
 } catch( Exception $e ) {
-	respond( $vidpath, '{"status":"fail","description":"' . $e->getMessage() . '"}' );
+	respond( $vidpath, '{"status":"fail","description":"' . $e->getMessage() . '","file":"' . $vidpath . '"}' );
 }
