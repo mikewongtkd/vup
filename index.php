@@ -27,7 +27,7 @@
               <div class="card mb-4 box-shadow">
                 <div class="card-body">
                   <p class="card-text"><code>Poomsae Name</code></p>
-                  <form action="upload.php" class="dropzone" id="prelim-0"></form>
+				  <div class="vaztic-upload-dropzone dropzone" action="upload.php" id="prelim-0"></div>
                   <div class="d-flex justify-content-between align-items-center">
                     <div class="btn-group">
                       <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
@@ -60,6 +60,21 @@
     <script src="include/dropzone/latest/dropzone.min.js"></script>
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.713.0.min.js"></script>
     <script>
+(() => {
+	$( '.vaztic-upload-dropzone' ).dropzone({
+		url: "upload.php",
+		maxFilesize: 1024 * 1024,
+		acceptedFiles: "video/*",
+		dataType : "HTML",
+		timeout: 0,
+		success: ( file, response ) => {
+			console.log( 'SUCCESS', file, response );
+		},
+		error: ( file, response ) => {
+			console.log( 'ERROR', file, response );
+		}
+	});
+});
     </script>
 
   </body>
