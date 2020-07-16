@@ -141,7 +141,7 @@ $(() => {
 		let ext    = file.name.match( /\.(\w+)$/ );
 		file.ext   = ext[ 1 ];
 
-		$( `#${formid}-progress` ).html( `Uploading File` );
+		$( `#${formid}-progress` ).html( `<span class="spinner-border text-secondary" role="status"><span class="sr-only">Uploading</span></span> Uploading File<span class="percentage">, Please Wait</span>` );
 
 		$.ajax({
 			url: 'clear.php',
@@ -190,6 +190,7 @@ endforeach;
 			if ( ev.target.readyState !== FileReader.DONE ) {
 				return;
 			}
+			
 
 			$.ajax( {
 				url: 'chunk.php',
@@ -212,7 +213,7 @@ endforeach;
 
 					if ( chunk.next < file.size ) {
 						// Update upload progress
-						$( `#${formid}-progress` ).html( `Uploading File -  ${percent_done}%` );
+						$( `#${formid}-progress .percentage` ).html( ` - ${percent_done}%` );
 
 						// More to upload, call function recursively
 						upload_file( target, chunk.next );
