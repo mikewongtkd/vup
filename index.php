@@ -41,7 +41,7 @@ $poomsae = $lookup[ $uuid ];
 
       <section class="jumbotron text-center">
         <div class="container">
-          <h1 class="jumbotron-heading">Upload your Poomsae Videos</h1>
+          <h1 class="jumbotron-heading">Upload Your Poomsae Videos</h1>
 		  <p class="lead text-muted">Welcome <b><?= $poomsae[ 'athname' ] ?></b>. Please upload your poomsae videos.</p>
         </div>
       </section>
@@ -67,7 +67,7 @@ $poomsae = $lookup[ $uuid ];
             <div class="col-md-6">
               <div class="card mb-4 box-shadow">
                 <div class="card-body">
-					<p class="round-and-form"><b><?= $rname ?></b> <span class="primary"><?= $ordinal ?> form</span></p>
+					<p class="round-and-form"><b><?= $rname ?></b> <span class="primary"><?= $ordinal ?> Form</span></p>
 					<p class="poomsae-name"><h4><?= $formname ?></h4></p>
 					<p class="vid-preview" id="<?= $formid ?>-preview">
 						<?php if( file_exists( "$webroot/thumbs/$uuid/$formid.png" )): 
