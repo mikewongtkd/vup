@@ -141,6 +141,8 @@ $(() => {
 		let ext    = file.name.match( /\.(\w+)$/ );
 		file.ext   = ext[ 1 ];
 
+		$( `#${formid}-progress` ).html( `Uploading File` );
+
 		$.ajax({
 			url: 'clear.php',
 			type: 'POST',
@@ -185,7 +187,6 @@ endforeach;
 		let formid = target.attr( 'name' );
 
 		reader.onloadend = function( ev ) {
-			console.log( 'DATA', ev.target );
 			if ( ev.target.readyState !== FileReader.DONE ) {
 				return;
 			}
