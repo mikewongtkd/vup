@@ -41,7 +41,7 @@ $poomsae = $lookup[ $uuid ];
 
       <section class="jumbotron text-center">
         <div class="container">
-          <h1 class="jumbotron-heading">Upload your Poomsae Videos</h1>
+          <h1 class="jumbotron-heading">Upload Your Poomsae Videos</h1>
 		  <p class="lead text-muted">Welcome <b><?= $poomsae[ 'athname' ] ?></b>. Please upload your poomsae videos.</p>
         </div>
       </section>
@@ -76,7 +76,10 @@ $poomsae = $lookup[ $uuid ];
 							if( file_exists( $validation )) {
 								$text    = file_get_contents( $validation );
 								$results = json_decode( $text, true );
-								$message = "<span class=\"text-danger\">{$results[ 'description' ]}</span> " . $message;
+								$class   = null;
+								if( $results[ 'status' ] == 'success' ) { $class = 'text-success'; } else
+								if( $results[ 'status' ] == 'fail'    ) { $class = 'text-danger'; }
+								$message = "<span class=\"{$class}\">{$results[ 'description' ]}.</span> {$message}";
 							}
 						?>
 						<img class="video-keyframe" src="thumbs/<?= $uuid ?>/<?= $formid ?>.png" />
@@ -212,8 +215,8 @@ endforeach;
 
 						// More to upload, call function recursively
 						upload_file( target, chunk.next );
+
 					} else {
-						console.log( formid, '<?= $uuid ?>', file.ext );
 						// Update upload progress
 						$( `#${formid}-progress` ).html( 'Upload Complete!' );
 
