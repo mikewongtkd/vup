@@ -67,7 +67,7 @@ $poomsae = $lookup[ $uuid ];
             <div class="col-md-6">
               <div class="card mb-4 box-shadow">
                 <div class="card-body">
-					<p class="round-and-form"><b><?= $rname ?></b> <span class="primary"><?= $ordinal ?> form</span></p>
+					<p class="round-and-form"><b><?= $rname ?></b> <span class="primary"><?= $ordinal ?> Form</span></p>
 					<p class="poomsae-name"><h4><?= $formname ?></h4></p>
 					<p class="vid-preview" id="<?= $formid ?>-preview">
 						<?php if( file_exists( "$webroot/thumbs/$uuid/$formid.png" )): 
