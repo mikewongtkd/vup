@@ -110,7 +110,7 @@ endforeach;
 
     <footer class="text-muted">
       <div class="container">
-        <p>&copy;2020 Vaztic LLC</p>
+        <p>&copy;2020 Mike Wong, Licensed to Vaztic LLC</p>
       </div>
     </footer>
 
