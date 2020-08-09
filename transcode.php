@@ -1,6 +1,13 @@
 <?php
 include_once( 'config.php' );
 
+function transcodepath( $uuid, $formid ) {
+	global $webroot;
+	$transcodepath = "$webroot/transcode/$uuid";
+	if( ! file_exists( $transcodepath )) { mkdir( $transcodepath ); }
+	return "$transcodepath/{$formid}.mp4";
+}
+
 function vidpath( $vid ) {
 	global $vidroot;
 	$vidpath = "$vidroot/videos/{$vid}";
@@ -35,8 +42,7 @@ if( ! preg_match( '/^\w+$/', $ext )) { respond_invalid_input(); }
 
 $vid            = "{$uuid}/{$formid}.{$ext}"; 
 $vidpath        = vidpath( $vid );
-$transcode      = "{$uuid}/{$formid}.mp4";
-$transcodepath  = transcodepath( $transcode );
+$transcodepath  = transcodepath( $uuid, $formid );
 
 if( ! $vidpath ) {
 	respond( null, '{"status":"fail","description":"Invalid Video ID/Path"}' );
