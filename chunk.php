@@ -15,13 +15,13 @@
 	}
 
 	function respond_not_found() {
-		header( "HTTP/1.0 404 Not Found" );
+		header( "HTTP/1.1 404 Not Found" );
 		echo '{"status":"fail","detail":"Invalid UUID or filename"}';
 		exit();
 	}
 
 	function respond_internal_server_error() {
-		header( "HTTP/1.0 500 Internal Server Error" );
+		header( "HTTP/1.1 500 Internal Server Error" );
 		echo '{"status":"fail","detail":"Bad chunk"}';
 		exit();
 	}
@@ -51,7 +51,7 @@
 
 	file_put_contents( $file, $file_data, FILE_APPEND );
 
-	header( "HTTP/1.0 200 OK" );
+	header( "HTTP/1.1 200 OK" );
 	echo '{"status":"success","detail":"' . $file_name . ' (' . $file_type . ') uploaded."}';
 	exit();
 ?>

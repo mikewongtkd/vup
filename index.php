@@ -10,7 +10,7 @@ function get_forms_for_uuid() {
 }
 
 function respond_invalid_uuid() {
-	header( 'HTTP/1.0 404 Not Found' );
+	header( 'HTTP/1.1 404 Not Found' );
 	echo( 'Invalid uuid' );
 	exit();
 }
@@ -67,12 +67,13 @@ $poomsae = $lookup[ $uuid ];
             <div class="col-md-6">
               <div class="card mb-4 box-shadow">
                 <div class="card-body">
-					<p class="round-and-form"><b><?= $rname ?></b> <span class="primary"><?= $ordinal ?> Form</span></p>
+					<p class="round-and-form"><b><?= $rname ?></b> <span class="primary"><?= $ordinal ?> Poomsae</span></p>
 					<p class="poomsae-name"><h4><?= $formname ?></h4></p>
 					<p class="vid-preview" id="<?= $formid ?>-preview">
-						<?php if( file_exists( "$webroot/thumbs/$uuid/$formid.png" )): 
+						<?php if( file_exists( "$vidroot/$uuid/$formid.png" )):
 							$message = "If you want to replace this video, please choose a file to upload.";
 							$validation = "$vidroot/videos/$uuid/$formid.json";
+							$transcode = "$vidroot/videos/$uuid/$formid.$ext";
 							if( file_exists( $validation )) {
 								$text    = file_get_contents( $validation );
 								$results = json_decode( $text, true );
@@ -82,7 +83,8 @@ $poomsae = $lookup[ $uuid ];
 								$message = "<span class=\"{$class}\">{$results[ 'description' ]}.</span> {$message}";
 							}
 						?>
-						<img class="video-keyframe" src="thumbs/<?= $uuid ?>/<?= $formid ?>.png" />
+						<video class="video-keyframe" src="videos/<?= $uuid ?>/<?= $formid ?>.mp4" />
+						<!-- <img class="video-keyframe" src="thumbs/<?= $uuid ?>/<?= $formid ?>.png" /> -->
 						<?php else: 
 							$message = "Please choose a file to upload.";
 

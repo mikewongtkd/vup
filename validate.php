@@ -21,13 +21,13 @@ function vidpath( $vid ) {
 }
 
 function respond_invalid_input() {
-	header( 'HTTP/1.0 404 Not Found' );
+	header( 'HTTP/1.1 404 Not Found' );
 	echo( 'Invalid input' );
 	exit();
 }
 
 function respond( $vidpath, $result ) {
-	header( 'HTTP/1.0 200 OK' );
+	header( 'HTTP/1.1 200 OK' );
 	echo( $result );
 	if( $vidpath ) {
 		$json = preg_replace( '/\.\w+$/', '.json', $vidpath );

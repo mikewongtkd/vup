@@ -1,5 +1,4 @@
 <?php
-
 include_once( 'config.php' );
 
 function vidpath( $vid ) {
@@ -34,22 +33,16 @@ if( ! preg_match( '/^[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f
 if( ! preg_match( '/^(?:prelim|semfin|finals)\-\d+$/', $formid )) { respond_invalid_input(); }
 if( ! preg_match( '/^\w+$/', $ext )) { respond_invalid_input(); }
 
-$vid      = "{$uuid}/{$formid}.{$ext}"; 
-$vidpath  = vidpath( $vid );
-$json     = "{$uuid}/{$formid}.json";
-$jsonpath = vidpath( $json );
+$vid            = "{$uuid}/{$formid}.{$ext}"; 
+$vidpath        = vidpath( $vid );
+$transcode      = "{$uuid}/{$formid}.mp4";
+$transcodepath  = transcodepath( $transcode );
 
-if( file_exists( $jsonpath )) {
-	$text = file_get_contents( $jsonpath );
-	$data = json_decode( $text, true );
-	if( array_key_exists( 'file', $data ) && file_exists( $data[ 'file' ]) && preg_match( "|^$vidroot/videos/$uuid|", $data[ 'file' ])) {
-		$archive = date( 'Y-m-d-H-i-s' );
-		`mv {$data[ 'file' ]} {$data[ 'file' ]}.{$archive}`;
-		unlink( $jsonpath );
-	}
+if( ! $vidpath ) {
+	respond( null, '{"status":"fail","description":"Invalid Video ID/Path"}' );
+	exit();
 }
 
-echo( '{"status":"success"}' );
-exit();
-
-?>
+try {
+    $respose   = `/usr/local/bin/ffmpeg -i $vidpath -c:v libx264 -c:a aac -vf format=yuv420p -s 1920x1080 -movflags +faststart $transcodepath`
+}
