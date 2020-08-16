@@ -83,8 +83,8 @@ $poomsae = $lookup[ $uuid ];
 								$message = "<span class=\"{$class}\">{$results[ 'description' ]}.</span> {$message}";
 							}
 						?>
-						<video class="video-keyframe" src="videos/<?= $uuid ?>/<?= $formid ?>.mp4" />
-						<!-- <img class="video-keyframe" src="thumbs/<?= $uuid ?>/<?= $formid ?>.png" /> -->
+						<!-- <video class="video-keyframe" src="videos/<?= $uuid ?>/<?= $formid ?>.mp4" /> -->
+						<img class="video-keyframe" src="thumbs/<?= $uuid ?>/<?= $formid ?>.png" />
 						<?php else:
 							$message = "Please choose a file to upload.";
 
@@ -124,13 +124,12 @@ endforeach;
     <script src="include/alertifyjs/latest/alertify.min.js"></script>
     <script src="include/bootstrap/latest/js/bootstrap.min.js"></script>
     <script src="include/dropzone/latest/dropzone.min.js"></script>
-    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.713.0.min.js"></script>
+	<script src="include/tus-js/latest/tus.min.js"></script>
     <script>
 $(() => {
 	let reader = {};
 	let file   = {};
 	let chunk  = { size : 2 * 1024 * 1024 };
-
 	// ============================================================
 	function start_upload( ev ) {
 	// ============================================================
@@ -138,32 +137,41 @@ $(() => {
 
 		let target = $( ev.target );
 		let formid = target.attr( 'name' );
-		reader     = new FileReader();
 		file       = target.get( 0 ).files[ 0 ];
-		let ext    = file.name.match( /\.(\w+)$/ );
-		file.ext   = ext[ 1 ];
+		console.dir(file);
+		console.log(JSON.stringify(file));
 
 		$( `#${formid}-progress` ).html( `<span class="spinner-border text-secondary" role="status"><span class="sr-only">Uploading</span></span> Uploading File<span class="percentage">, Please Wait</span>` );
 
-		$.ajax({
-			url: 'clear.php',
-			type: 'POST',
-			dataType: 'json',
-			cache: false,
-			data: {
-				formid : formid,
-				uuid   : '<?= $uuid ?>',
-				ext    : file.ext
+		// Create a new tus upload
+		var upload = new tus.Upload(file, {
+			endpoint: "/files/", // need to configure a proxy to the tusd
+			retryDelays: [0, 3000, 5000, 10000, 20000],
+			overridePatchMethod: true,
+			chunkSize: 1024*1024,
+			metadata: {
+				filename: file.name,
+				filetype: file.type,
+				formid: target.attr( 'name' ),
+				uuid: '<?= $uuid ?>'
 			},
-			error: ( jqXHR, textStatus, errorThrown ) => {
-				$( 'input[type="file"]' ).show();
-				console.log( jqXHR, textStatus, errorThrown );
+			onError: function(error) {
+				console.log("Failed because: " + error)
 			},
-			success: ( response ) => {
-				upload_file( target, 0 );
-			}
-		});
+			onProgress: function(bytesUploaded, bytesTotal) {
+				var percent_done = Math.floor( ( bytesUploaded / bytesTotal ) * 100 );
+				$( `#${formid}-progress .percentage` ).html( ` - ${percent_done}%` );
+			},
+			onSuccess: function() {
+				console.log("Download %s from %s", upload.file.name, upload.url);
+				// Update upload progress
+				$( `#${formid}-progress` ).html( 'Upload Complete!' );
+				// validate_video( formid, file.ext );
 
+			}
+		})
+		// Start the upload
+		upload.start()
 	}
 
 <?php
@@ -181,111 +189,7 @@ foreach( $rounds as $round ):
 endforeach;
 ?>
 
-	// ============================================================
-	function upload_file( target, start ) {
-	// ============================================================
-		chunk.next = start + chunk.size + 1;
-		let blob   = file.slice( start, chunk.next );
-		let formid = target.attr( 'name' );
-
-		reader.onloadend = function( ev ) {
-			if ( ev.target.readyState !== FileReader.DONE ) {
-				return;
-			}
-
-
-			$.ajax( {
-				url: 'chunk.php',
-				type: 'POST',
-				dataType: 'json',
-				cache: false,
-				data: {
-					file_data : ev.target.result,
-					file      : file.name,
-					file_type : file.type,
-					formid    : formid,
-					uuid      : '<?= $uuid ?>'
-				},
-				error: function( jqXHR, textStatus, errorThrown ) {
-					console.log( jqXHR, textStatus, errorThrown );
-				},
-				success: function( data ) {
-					var size_done = start + chunk.size;
-					var percent_done = Math.floor( ( size_done / file.size ) * 100 );
-
-					if ( chunk.next < file.size ) {
-						// Update upload progress
-						$( `#${formid}-progress .percentage` ).html( ` - ${percent_done}%` );
-
-						// More to upload, call function recursively
-						upload_file( target, chunk.next );
-
-					} else {
-						// Update upload progress
-						$( `#${formid}-progress` ).html( 'Upload Complete!' );
-
-						validate_video( formid, file.ext );
-					}
-				}
-			} );
-		};
-
-		reader.readAsDataURL( blob );
-
-	}
 });
-function validate_video( formid, ext ) {
-	$.ajax({
-		url: 'validate.php',
-		type: 'POST',
-		dataType: 'json',
-		cache: false,
-		data: {
-			formid : formid,
-			uuid   : '<?= $uuid ?>',
-			ext    : ext
-		},
-		error: ( jqXHR, textStatus, errorThrown ) => {
-			$( 'input[type="file"]' ).show();
-			console.log( jqXHR, textStatus, errorThrown );
-		},
-		success: ( response ) => {
-			$( 'input[type="file"]' ).show();
-			if( response.status == 'success' ) {
-				$( `#${formid}-progress` ).empty().html( `<span class="text-success">Upload Complete! Video meets resolution, orientation, and framerate requirements</span>` );
-			} else {
-				$( `#${formid}-progress` ).empty().html( `<span class="text-danger">${response.description}</span>` );
-			}
-			$( `#${formid}-preview` ).html( `<img src="thumbs/<?= $uuid ?>/${formid}.png" class="video-keyframe" />` );
-		}
-	});
-}
-function transcode_video( formid, ext ) {
-	$.ajax({
-		url: 'transcode.php',
-		type: 'POST',
-		dataType: 'json',
-		cache: false,
-		data {
-			formid 	: formid,
-			uuid 	: '<?= uuid ?>',
-			ext 	: ext
-		},
-		error: ( jqXHR, textStatus, errorThrown ) => {
-			$( 'input[type="file"]' ).show();
-			console.log( jqXHR, textStatus, errorThrown );
-		},
-		success: ( response ) => {
-			$( 'input[type="file"]' ).show();
-			if( response.status == 'success' ) {
-				$( `#${formid}-progress` ).empty().html( `<span class="text-success">Upload Complete! Video meets resolution, orientation, and framerate requirements</span>` );
-			} else {
-				$( `#${formid}-progress` ).empty().html( `<span class="text-danger">${response.description}</span>` );
-			}
-			$( `#${formid}-preview` ).html( `<img src="thumbs/<?= $uuid ?>/${formid}.png" class="video-keyframe" />` );
-		}
-	});
-}
     </script>
 
   </body>
