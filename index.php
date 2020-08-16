@@ -125,6 +125,7 @@ endforeach;
     <script src="include/bootstrap/latest/js/bootstrap.min.js"></script>
     <script src="include/dropzone/latest/dropzone.min.js"></script>
 	<script src="include/tus-js/latest/tus.min.js"></script>
+	<script src="include/md5/latest/md5.min.js"></script>
     <script>
 $(() => {
 	let reader = {};
@@ -138,41 +139,85 @@ $(() => {
 		let target = $( ev.target );
 		let formid = target.attr( 'name' );
 		file       = target.get( 0 ).files[ 0 ];
-		console.dir(file);
-		console.log(JSON.stringify(file));
+		// var hash = md5(`<?= $uuid ?>${target.attr( 'name' )}${file.name}`);
+		
+		// var reader = new FileReader();
 
+		// reader.onload = function(event) {
+		// 	var binary = event.target.result;
+		// 	var hash = md5(binary);
+
+
+			
+		// };
+		// 	reader.readAsBinaryString(file);
 		$( `#${formid}-progress` ).html( `<span class="spinner-border text-secondary" role="status"><span class="sr-only">Uploading</span></span> Uploading File<span class="percentage">, Please Wait</span>` );
-
 		// Create a new tus upload
 		var upload = new tus.Upload(file, {
-			endpoint: "/files/", // need to configure a proxy to the tusd
-			retryDelays: [0, 3000, 5000, 10000, 20000],
-			overridePatchMethod: true,
-			chunkSize: 1024*1024,
-			metadata: {
-				filename: file.name,
-				filetype: file.type,
-				formid: target.attr( 'name' ),
-				uuid: '<?= $uuid ?>'
-			},
-			onError: function(error) {
-				console.log("Failed because: " + error)
-			},
-			onProgress: function(bytesUploaded, bytesTotal) {
-				var percent_done = Math.floor( ( bytesUploaded / bytesTotal ) * 100 );
-				$( `#${formid}-progress .percentage` ).html( ` - ${percent_done}%` );
-			},
-			onSuccess: function() {
-				console.log("Download %s from %s", upload.file.name, upload.url);
-				// Update upload progress
-				$( `#${formid}-progress` ).html( 'Upload Complete!' );
-				// validate_video( formid, file.ext );
+				endpoint: `${window.location.protocol}//${window.location.hostname}:1080/files/`,// no need for proxy here
+				retryDelays: [0, 3000, 5000, 10000, 20000],
+				overridePatchMethod: true,
+				chunkSize: 1024*1024,
+				storeFingerprintForResuming: true,
+				metadata: {
+					filename: file.name,
+					filetype: file.type,
+					formid: target.attr( 'name' ),
+					uuid: '<?= $uuid ?>',
+					// md5: hash
+				},
+				onError: function(error) {
+					console.log("Failed because: " + error)
+				},
+				onProgress: function(bytesUploaded, bytesTotal) {
+					var percent_done = Math.floor( ( bytesUploaded / bytesTotal ) * 100 );
+					$( `#${formid}-progress .percentage` ).html( ` - ${percent_done}%` );
+				},
+				onSuccess: function() {
+					console.log("Download %s from %s", upload.file.name, upload.url);
+					// Update upload progress
+					$( `#${formid}-progress` ).html( 'Upload Complete!' );
+					// validate_video( formid, file.ext );
 
+				}
+			})
+			// Start the upload
+		upload.findPreviousUploads().then((previousUploads) => {
+			var prevUpload = null;
+			// console.log(JSON.stringify(previousUploads));
+			// console.log(JSON.stringify(file));
+			// console.log(file.size);
+			// console.log(file.name);
+			for (var u in previousUploads){
+				var curr = previousUploads[u];
+				// console.log(JSON.stringify(curr));
+
+				if (curr.size == file.size && curr.metadata.filename == file.name && curr.metadata.uuid == '<?= $uuid ?>' && curr.metadata.formid == target.attr( 'name' ) && curr.metadata.filetype == file.type){
+					prevUpload = curr;
+					console.log(JSON.stringify(prevUpload));
+					break;
+				}
 			}
-		})
-		// Start the upload
-		upload.start()
-	}
+			// previousUploads is an array containing details about the previously started uploads.
+			// The objects in the array have following properties:
+			// - size: The upload's size in bytes
+			// - metadata: The metadata associated with the upload during its creation
+			// - creationTime: The timestamp when the upload was created
+
+			// We ask the end user if they want to resume one of those uploads or start a new one.
+			// var chosenUpload = askToResumeUpload(previousUploads);
+
+			// If an upload has been chosen to be resumed, instruct the upload object to do so.
+			if(prevUpload) {
+				upload.resumeFromPreviousUpload(prevUpload);
+			}
+			// Finally start the upload requests.
+			upload.start();
+		});
+
+			
+			// upload.start()
+	};
 
 <?php 
 foreach( $rounds as $round ):
