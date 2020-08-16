@@ -40,7 +40,7 @@ if( ! preg_match( '/^[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f
 if( ! preg_match( '/^(?:prelim|semfin|finals)\-\d+$/', $formid )) { respond_invalid_input(); }
 if( ! preg_match( '/^\w+$/', $ext )) { respond_invalid_input(); }
 
-$vid            = "{$uuid}/{$formid}.{$ext}"; 
+$vid            = "{$uuid}/{$formid}.{$ext}";
 $vidpath        = vidpath( $vid );
 $transcodepath  = transcodepath( $uuid, $formid );
 
@@ -50,5 +50,8 @@ if( ! $vidpath ) {
 }
 
 try {
-    $respose   = `/usr/local/bin/ffmpeg -i $vidpath -c:v libx264 -c:a aac -vf format=yuv420p -s 1920x1080 -movflags +faststart $transcodepath`
+	$respose   = `/usr/local/bin/ffmpeg -i $vidpath -c:v libx264 -c:a aac -vf format=yuv420p -s 1920x1080 -movflags +faststart $transcodepath`;
+
+} catch ( Exception $e ) {
+	respond( null, $e->getMessage());
 }

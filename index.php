@@ -53,14 +53,14 @@ $poomsae = $lookup[ $uuid ];
 			<div class="division-name"><?= $poomsae[ 'divname' ] ?></div>
 		</div>
 <?php foreach( $rounds as $round ):
-	if( array_key_exists( $round[ 'id' ], $poomsae )): 
+	if( array_key_exists( $round[ 'id' ], $poomsae )):
 		$rid   = $round[ 'id' ];
 		$rname = $round[ 'name' ];
 		$list  = $poomsae[ $rid ];
 ?>
           <div class="row">
 
-<?php foreach( $list as $i => $formname ): 
+<?php foreach( $list as $i => $formname ):
 	$ordinal = $i == 0 ? 'First' : 'Second';
 	$formid  = "{$rid}-{$i}";
 ?>
@@ -85,7 +85,7 @@ $poomsae = $lookup[ $uuid ];
 						?>
 						<video class="video-keyframe" src="videos/<?= $uuid ?>/<?= $formid ?>.mp4" />
 						<!-- <img class="video-keyframe" src="thumbs/<?= $uuid ?>/<?= $formid ?>.png" /> -->
-						<?php else: 
+						<?php else:
 							$message = "Please choose a file to upload.";
 
 						endif; ?>
@@ -100,9 +100,9 @@ $poomsae = $lookup[ $uuid ];
 <?php endforeach; ?>
 
           </div>
-<?php 
+<?php
 	endif;
-endforeach; 
+endforeach;
 ?>
 
         </div>
@@ -166,18 +166,18 @@ $(() => {
 
 	}
 
-<?php 
+<?php
 foreach( $rounds as $round ):
 	if( ! array_key_exists( $round[ 'id' ], $poomsae )) { continue; }
 	$rid   = $round[ 'id' ];
 	$list  = $poomsae[ $rid ];
 
-	foreach( $list as $i => $formname ): 
+	foreach( $list as $i => $formname ):
 		$formid  = "{$rid}-{$i}";
 ?>
 	$( '#<?= $formid ?>-upload' ).off( 'change' ).change(( ev ) => { start_upload( ev ); $( 'input[type="file"]' ).hide(); });
-<?php 
-	endforeach; 
+<?php
+	endforeach;
 endforeach;
 ?>
 
@@ -192,7 +192,7 @@ endforeach;
 			if ( ev.target.readyState !== FileReader.DONE ) {
 				return;
 			}
-			
+
 
 			$.ajax( {
 				url: 'chunk.php',
@@ -244,6 +244,32 @@ function validate_video( formid, ext ) {
 			formid : formid,
 			uuid   : '<?= $uuid ?>',
 			ext    : ext
+		},
+		error: ( jqXHR, textStatus, errorThrown ) => {
+			$( 'input[type="file"]' ).show();
+			console.log( jqXHR, textStatus, errorThrown );
+		},
+		success: ( response ) => {
+			$( 'input[type="file"]' ).show();
+			if( response.status == 'success' ) {
+				$( `#${formid}-progress` ).empty().html( `<span class="text-success">Upload Complete! Video meets resolution, orientation, and framerate requirements</span>` );
+			} else {
+				$( `#${formid}-progress` ).empty().html( `<span class="text-danger">${response.description}</span>` );
+			}
+			$( `#${formid}-preview` ).html( `<img src="thumbs/<?= $uuid ?>/${formid}.png" class="video-keyframe" />` );
+		}
+	});
+}
+function transcode_video( formid, ext ) {
+	$.ajax({
+		url: 'transcode.php',
+		type: 'POST',
+		dataType: 'json',
+		cache: false,
+		data {
+			formid 	: formid,
+			uuid 	: '<?= uuid ?>',
+			ext 	: ext
 		},
 		error: ( jqXHR, textStatus, errorThrown ) => {
 			$( 'input[type="file"]' ).show();
