@@ -1,4 +1,8 @@
 <?php
+
+include_once( 'config.php' );
+global $vidroot;
+
 	function decode_chunk( $data ) {
 		$data = explode( ';base64,', $data );
 
@@ -38,7 +42,7 @@
 	if( ! preg_match( '/^[0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{12}$/', $uuid )) { respond_not_found(); }
 	if( ! preg_match( '/^(?:prelim|semfin|finals)\-\d/', $file_name )) { respond_not_found(); }
 
-	$file_path = "/usr/local/vaztic/videos/{$uuid}";
+	$file_path = "{$vidroot}/videos/{$uuid}";
 	$file_data = decode_chunk( $_POST[ 'file_data' ] );
 	$file      = "{$file_path}/$file_name";
 
